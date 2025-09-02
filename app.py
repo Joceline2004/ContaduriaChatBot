@@ -9,6 +9,7 @@ PHONE_NUMBER_ID = "751332178071615"
 @app.route("/webhook", methods=["GET"])
 def verify():
     # Verificación con Meta
+    # jeje
     verify_token = "mi_token_secreto"
     mode = request.args.get("hub.mode")
     token = request.args.get("hub.verify_token")
