@@ -3,36 +3,46 @@ import requests
 
 app = Flask(__name__)
 
-ACCESS_TOKEN = "EAAJfrdqlqq0BPXDafvSNpgdpSTq5Xg1ZBm2IZAkJ0u2TP0H1HKZChgFZBphGkcUPr7fgnK8MsAROhRKO8tpajmSGtmzBKWt5BOmRnZBPvBKZAcKuSZCFfoukZB7ccTC7r6D5h2889O4WB2MZBuhVshDrQNF9TIMlvZCDrnszh5GQLuFj09UXE3WEwREnOWWPTUscwRsbkcflU5iiEHIbbfKJTNz4uZCgSUgZBxMAkyzS0ZAIwgAZDZD"
-PHONE_NUMBER_ID = "751332178071615"
+ACCESS_TOKEN = "EAAaxAxtdWV4BPcvWeuzICiXL6SDe5pbQhQw8CSaHONznDi5GgJq1qJZBcHwDpujZCWu2fbymXcnKrqNDtFhpP9s4AtzYfBliUrZAIgZBZBMad01UI0JlAhSFHoZCmhyXBKgxOk0RRsw8HvcrGvn6HjVOZAoINDUwZBk3K5JXZAxCjWBSPZANViZBNZCXnjEJIDqwI8d571bftnsepZBlTLSqvXBbZAx0A0ZCcRVCrJzcIlSMWvT1gelkycZD"
+PHONE_NUMBER_ID = "814488218406589"
 
 @app.route("/webhook", methods=["GET"])
 def verify():
-    # Verificación con Meta
-    # jeje
     verify_token = "mi_token_secreto"
     mode = request.args.get("hub.mode")
     token = request.args.get("hub.verify_token")
     challenge = request.args.get("hub.challenge")
 
-    if mode and token:
-        if token == verify_token:
-            return challenge, 200
-        else:
-            return "Error de verificación", 403
+    print("🌐 Verificación recibida:", mode, token, challenge) 
+
+    # CORRECCIÓN 1: Agregar manejo de caso donde falten parámetros
+    if not (mode and token and challenge):
+        return "Faltan parámetros", 400
+
+    if token == verify_token:
+        return challenge, 200
+    else:
+        return "Error de verificación", 403
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
     data = request.get_json()
-    print(data)  # Para debug en consola
+    print("🔹 Data recibida:", data)  # CORRECCIÓN 2: imprimir JSON completo para debug
 
-    if "messages" in data["entry"][0]["changes"][0]["value"]:
-        message = data["entry"][0]["changes"][0]["value"]["messages"][0]
+    # CORRECCIÓN 3: Manejar caso cuando no existan mensajes
+    try:
+        messages = data["entry"][0]["changes"][0]["value"]["messages"]
+        message = messages[0]
         from_number = message["from"]
         text = message["text"]["body"]
 
-        # Aquí programas la respuesta que quieras
+        # CORRECCIÓN 4: imprimir info de envío para debug
+        print(f"Enviando mensaje a {from_number}: {text}")
+
         send_message(from_number, f"Recibí tu mensaje: {text} ✅")
+    except KeyError:
+        print("No hay mensajes en este POST")  # evita KeyError si llegan otros eventos
+    
     return "ok", 200
 
 def send_message(to, text):
@@ -41,13 +51,21 @@ def send_message(to, text):
         "Authorization": f"Bearer {ACCESS_TOKEN}",
         "Content-Type": "application/json"
     }
+
+    # ✅ CORRECCIÓN 6: asegurar que el número lleve "+"
+    if not to.startswith("+"):
+        to = f"+{to}"
+
     body = {
         "messaging_product": "whatsapp",
         "to": to,
         "type": "text",
         "text": {"body": text}
     }
-    requests.post(url, headers=headers, json=body)
+
+    # CORRECCIÓN 5: imprimir la respuesta de la API para ver errores
+    response = requests.post(url, headers=headers, json=body)
+    print("🔹 Response WhatsApp API:", response.status_code, response.text)
 
 if __name__ == "__main__":
     app.run(port=5000, debug=True)
